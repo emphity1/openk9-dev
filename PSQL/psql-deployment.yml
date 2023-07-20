@@ -1,0 +1,80 @@
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: dkozak-openk9-test
+  name: postgresql
+  labels:
+    app: postgresql
+spec:
+  type: NodePort
+  ports:
+   - port: 5432
+  selector:
+   app: postgresql
+
+---
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  namespace: dkozak-openk9-test
+  name: postgresql-config
+  labels:
+    app: postgresql
+data:
+  POSTGRES_PASSWORD: openk9
+  POSTGRES_USER: openk9
+  POSTGRES_MULTIPLE_DATABASES: keycloak,lportal,openk9
+  PGDATA: /var/lib/postgresql/data/pgdata
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: dkozak-openk9-test
+  name: postgresql
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgresql
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: postgresql
+    spec:
+      containers:
+        - name: postgresql
+          image: postgres:13
+          imagePullPolicy: "IfNotPresent"
+          ports:
+            - containerPort: 5432
+          envFrom:
+            - configMapRef:
+                name: postgresql-config
+          volumeMounts:
+            - mountPath: /var/lib/postgresql/data
+              name: postgresql-claim
+      volumes:
+        - name: postgresql-claim
+          persistentVolumeClaim:
+            claimName: postgresql-claim
+
+---
+
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  namespace: dkozak-openk9-test
+  labels:
+    app: postgresql-claim
+  name: postgresql-claim
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 512Mi
