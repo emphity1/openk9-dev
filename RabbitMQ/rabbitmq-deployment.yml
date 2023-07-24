@@ -1,0 +1,91 @@
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: dkozak-openk9-test
+  name: rabbitmq
+  labels:
+    app: rabbitmq
+spec:
+  ports:
+  - name: management
+    protocol: TCP
+    port: 15672
+    targetPort: 15672
+  - name: amqp
+    protocol: TCP
+    port: 5672
+    targetPort: 5672
+  - name: http
+    port: 80
+    targetPort: 80
+  selector:
+    app: rabbitmq
+
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: rabbitmq-secret
+type: Opaque
+data:
+  RABBITMQ_DEFAULT_USER: 'b3Blbms5'
+  RABBITMQ_DEFAULT_PASSWORD: 'b3Blbms5'
+
+---
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  namespace: dkozak-openk9-test
+  name: rabbitmq-config
+  labels:
+    app: rabbitmq
+data:
+  WAIT_HOSTS: 'rabbitmq:5672'
+  WAIT_HOSTS_TIMEOUT: '300'
+  RABBIT_HOST: 'rabbitmq'
+  RABBIT_PORT: '5672'
+  RABBIT_EXCHANGE: 'amq.topic'
+  RABBIT_QUEUE_NAME: 'io.openk9.ner'
+  RABBIT_PUB_ROUTING_KEY: 'entity-manager-request'
+
+  
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: dkozak-openk9-test
+  name: rabbitmq
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: rabbitmq
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      annotations:
+       instrumentation.opentelemetry.io/inject-python: "true"
+      labels:
+        app: rabbitmq
+    spec:
+      containers:
+        - name: rabbitmq
+          image:  rabbitmq:management
+          imagePullPolicy: Always
+          env:
+            - name: RABBITMQ_DEFAULT_USER
+              valueFrom:
+                secretKeyRef:
+                  name: rabbitmq-secret
+                  key: RABBITMQ_DEFAULT_USER
+            - name: RABBITMQ_DEFAULT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: rabbitmq-secret
+                  key: RABBITMQ_DEFAULT_PASSWORD
+
+
