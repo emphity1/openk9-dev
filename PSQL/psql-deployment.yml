@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: Service
 metadata:
-  namespace: dkozak-openk9-test
+  #namespace: dkozak-openk9-test
   name: postgresql
   labels:
     app: postgresql
@@ -17,30 +17,28 @@ spec:
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  namespace: dkozak-openk9-test
+  #namespace: dkozak-openk9-test
   name: postgresql-config
   labels:
     app: postgresql
 data:
-  POSTGRES_PASSWORD: openk9
-  POSTGRES_USER: openk9
-  POSTGRES_MULTIPLE_DATABASES: keycloak,lportal,openk9
-  PGDATA: /var/lib/postgresql/data/pgdata
+  POSTGRESQL_PASSWORD: postgres
+  POSTGRESQL_USERNAME: postgres
+  POSTGRESQL_DATABASE: postgres
 
 ---
 
 apiVersion: apps/v1
-kind: Deployment
+kind: StatefulSet
 metadata:
-  namespace: dkozak-openk9-test
+  #namespace: dkozak-openk9-test
   name: postgresql
 spec:
+  serviceName: postgresql
   replicas: 1
   selector:
     matchLabels:
       app: postgresql
-  strategy:
-    type: Recreate
   template:
     metadata:
       labels:
@@ -48,13 +46,13 @@ spec:
     spec:
       containers:
         - name: postgresql
-          image: postgres:13
+          image: bitnami/postgresql:11.20.0-debian-11-r74
           imagePullPolicy: "IfNotPresent"
           ports:
             - containerPort: 5432
           envFrom:
             - configMapRef:
-                name: postgresql-config
+                name: postgresql-config  # Utilizza il ConfigMap per le variabili d'ambiente
           volumeMounts:
             - mountPath: /var/lib/postgresql/data
               name: postgresql-claim
@@ -63,12 +61,13 @@ spec:
           persistentVolumeClaim:
             claimName: postgresql-claim
 
+
 ---
 
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  namespace: dkozak-openk9-test
+  #namespace: dkozak-openk9-test
   labels:
     app: postgresql-claim
   name: postgresql-claim

@@ -1,0 +1,26 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  #namespace: dkozak-openk9-test
+  name: keycloak-job
+spec:
+  template:
+    spec:
+      containers:
+        - name: keycloak-job
+          image: bitnami/postgresql:11.20.0-debian-11-r74
+          args: ["sh", "-c", "PGPASSWORD=postgres psql -h postgresql -p 5432 -U postgres -c \"CREATE ROLE keycloak WITH LOGIN ENCRYPTED PASSWORD 'keycloak';\" --no-password && PGPASSWORD=postgres psql -h postgresql -p 5432 -U postgres -c \"CREATE DATABASE keycloak OWNER keycloak;\" --no-password"]
+
+          env:
+          - name: PGHOST
+            value: "postgresql"
+          - name: PGPORT
+            value: "5432"
+          - name: PGUSER
+            value: "postgres"
+          - name: PGPASSWORD
+            value: "postgres"
+          envFrom:
+            - configMapRef:
+                name: postgresql-config
+      restartPolicy: Never

@@ -1,3 +1,7 @@
+
+########### SERVICE #############
+
+
 apiVersion: v1
 kind: Service
 metadata:
@@ -6,6 +10,7 @@ metadata:
   labels:
     app: rabbitmq
 spec:
+  type: LoadBalancer   # Specifica il tipo di servizio come LoadBalancer
   ports:
   - name: management
     protocol: TCP
@@ -15,24 +20,50 @@ spec:
     protocol: TCP
     port: 5672
     targetPort: 5672
-  - name: http
-    port: 80
-    targetPort: 80
   selector:
     app: rabbitmq
 
+---
+
+########### INGRESS #############
+
+
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  namespace: dkozak-openk9-test
+  name: minimal-ingress
+  annotations:
+    kubernetes.io/ingress.class: "nginx"
+spec:
+  rules:
+  - host: "rabbitmq.local"
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: rabbitmq
+            port:
+              number: 15672
+
 
 ---
+
+
 apiVersion: v1
 kind: Secret
 metadata:
   name: rabbitmq-secret
 type: Opaque
 data:
-  RABBITMQ_DEFAULT_USER: 'b3Blbms5'
-  RABBITMQ_DEFAULT_PASSWORD: 'b3Blbms5'
+  RABBITMQ_DEFAULT_USER: b3Blbms5
+  RABBITMQ_DEFAULT_PASS: b3Blbms5
 
 ---
+
+########### CONFIGMAP #############
 
 apiVersion: v1
 kind: ConfigMap
@@ -50,42 +81,52 @@ data:
   RABBIT_QUEUE_NAME: 'io.openk9.ner'
   RABBIT_PUB_ROUTING_KEY: 'entity-manager-request'
 
-  
 ---
 
+########### STATEFUL SET #############
+
+
 apiVersion: apps/v1
-kind: Deployment
+kind: StatefulSet
 metadata:
-  namespace: dkozak-openk9-test
   name: rabbitmq
+  namespace: dkozak-openk9-test
 spec:
   replicas: 1
   selector:
     matchLabels:
       app: rabbitmq
-  strategy:
-    type: Recreate
+  serviceName: rabbitmq
   template:
     metadata:
-      annotations:
-       instrumentation.opentelemetry.io/inject-python: "true"
       labels:
         app: rabbitmq
     spec:
       containers:
         - name: rabbitmq
-          image:  rabbitmq:management
+          image: rabbitmq:management
           imagePullPolicy: Always
+          ports:
+            - containerPort: 15672
+              name: management
+            - containerPort: 5672
+              name: amqp
           env:
             - name: RABBITMQ_DEFAULT_USER
               valueFrom:
                 secretKeyRef:
                   name: rabbitmq-secret
                   key: RABBITMQ_DEFAULT_USER
-            - name: RABBITMQ_DEFAULT_PASSWORD
+            - name: RABBITMQ_DEFAULT_PASS
               valueFrom:
                 secretKeyRef:
                   name: rabbitmq-secret
-                  key: RABBITMQ_DEFAULT_PASSWORD
-
-
+                  key: RABBITMQ_DEFAULT_PASS
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 0.5Gi
