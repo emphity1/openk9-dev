@@ -65,3 +65,5 @@ spec:
         - containerPort: 9300
           name: transport
         name: elasticsearch
+  volumeClaimTemplates:
+    - metadata;

@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: Service
 metadata:
-  #namespace: dkozak-openk9-test
+  namespace: dkozak-openk9-test
   name: postgresql
   labels:
     app: postgresql
@@ -17,7 +17,7 @@ spec:
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  #namespace: dkozak-openk9-test
+  namespace: dkozak-openk9-test
   name: postgresql-config
   labels:
     app: postgresql
@@ -31,7 +31,7 @@ data:
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
-  #namespace: dkozak-openk9-test
+  namespace: dkozak-openk9-test
   name: postgresql
 spec:
   serviceName: postgresql
@@ -67,7 +67,7 @@ spec:
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  #namespace: dkozak-openk9-test
+  namespace: dkozak-openk9-test
   labels:
     app: postgresql-claim
   name: postgresql-claim
